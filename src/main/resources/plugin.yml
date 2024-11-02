@@ -1,0 +1,8 @@
+name: YsmDisplay
+version: '1.0-SNAPSHOT'
+main: org.windy.ysmDisplay.YsmDisplay
+api-version: '1.21'
+commands:
+  ydp:
+    description: "Test command for YsmDisplay"
+    usage: "/ydp test"
