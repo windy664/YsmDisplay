@@ -31,7 +31,6 @@ public class YsmDisplay extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = (Player) sender;
         if (command.getName().equalsIgnoreCase("ydp")) {
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("export")) {
@@ -41,9 +40,13 @@ public class YsmDisplay extends JavaPlugin {
                     loadTextures(sender);
                     return true;
                 } else if (args[0].equalsIgnoreCase("player")) {
-                    readPlayerData(player);
+                    if (sender instanceof Player) {
+                        readPlayerData((Player) sender);
+                    } else {
+                        sender.sendMessage("This command can only be used by players.");
+                    }
                     return true;
-                } else if (args.length >= 9 && args[0].equalsIgnoreCase("display")) {
+                } else if (args[0].equalsIgnoreCase("display") && args.length >= 4) {
                     if (sender.hasPermission("ysmdisplay.display")) { // 假设我们有一个权限节点
                         Player targetPlayer = Bukkit.getPlayer(args[1]);
                         if (targetPlayer != null) {
@@ -51,7 +54,8 @@ public class YsmDisplay extends JavaPlugin {
                             String timeArg = args[3];
                             long duration = parseTime(timeArg); // 解析时间参数
                             if (duration > 0) {
-                                String texture = getFirstTexture(modelId); // 从文件中获取纹理
+                                String file_model = modelId + ".ysm";
+                                String texture = getFirstTexture(file_model); // 从文件中获取纹理
                                 if (texture != null) {
                                     // 设置模型
                                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm model set " + args[1] + " " + modelId + " " + texture + " true");
