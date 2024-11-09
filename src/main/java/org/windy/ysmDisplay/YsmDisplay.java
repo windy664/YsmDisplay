@@ -23,6 +23,12 @@ import java.util.stream.Collectors;
 import de.tr7zw.nbtapi.NBTContainer;
 import de.tr7zw.nbtapi.NBTFile;
 public final class YsmDisplay extends JavaPlugin implements Listener {
+    private String only_player;
+    private String not_found_model;
+    private String not_format;
+    private String error_file;
+    private String not_permission;
+
 
     @Override
     public void onEnable() {
@@ -32,6 +38,17 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         getCommand("ydp").setTabCompleter(this);
 
         getLogger().info("YesDisplay Plugin Enabled!");
+
+        loadconfig();
+    }
+
+    private void loadconfig(){
+        only_player = getConfig().getString("only_player","仅玩家可使用");
+        not_found_model = getConfig().getString("not_found_model","未找到模型");
+        not_format = getConfig().getString("not_format","无效的格式");
+        not_permission = getConfig().getString("not_permission","无权限");
+        error_file = getConfig().getString("error_file","错误的文件");
+
     }
 
     @Override
@@ -53,7 +70,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                     if (sender instanceof Player) {
                         readPlayerData((Player) sender);
                     } else {
-                        sender.sendMessage("This command can only be used by players.");
+                        sender.sendMessage(only_player);
                     }
                     return true;
                 } else if (args[0].equalsIgnoreCase("display") && args.length >= 4) {
@@ -72,18 +89,18 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
                                     // 安排定时任务，在指定时间后取消模型
                                     scheduleModelReset(targetPlayer, modelId, duration);
-                                    sender.sendMessage("Model set for " + targetPlayer.getName() + " with ID " + modelId + " for " + timeArg + ".");
+                                    sender.sendMessage("已为玩家" + targetPlayer.getName() + "体验模型" + modelId + "，到期：" + timeArg + ".");
                                 } else {
-                                    sender.sendMessage("Could not find the texture for the model ID " + modelId + ".");
+                                    sender.sendMessage(not_found_model + modelId + ".");
                                 }
                             } else {
-                                sender.sendMessage("Invalid time format. Use 30s, 0.5m, 1h, 3d, etc.");
+                                sender.sendMessage(not_format);
                             }
                         } else {
-                            sender.sendMessage("Player " + args[1] + " is not online.");
+                            sender.sendMessage( args[1] + "disonline");
                         }
                     } else {
-                        sender.sendMessage("You do not have permission to use this command.");
+                        sender.sendMessage(not_permission);
                     }
                     return true;
                 }
@@ -160,11 +177,11 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                 String nameWithoutExtension = fileName.substring(0, fileName.length() - 4);
                 Bukkit.getScheduler().runTask(this, () -> {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm export " + nameWithoutExtension);
-                    sender.sendMessage("Executed: /ysm export " + nameWithoutExtension);
+                  //  sender.sendMessage("Executed: /ysm export " + nameWithoutExtension);
                 });
             }
         } else {
-            sender.sendMessage("No .ysm files found.");
+            sender.sendMessage(not_found_model);
         }
     }
 
@@ -186,8 +203,8 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                         }
                     }
                 } catch (IOException e) {
-                    sender.sendMessage("Error reading file: " + fileName);
-                    getLogger().severe("Error reading file: " + fileName);
+                    sender.sendMessage(error_file + fileName);
+                    getLogger().severe(error_file + fileName);
                     e.printStackTrace();
                 }
             }
@@ -196,37 +213,37 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
             try {
                 Path outputPath = Paths.get(exportDir.getAbsolutePath(), "textures_output.txt");
                 Files.write(outputPath, textureList);
-                sender.sendMessage("Textures exported to: " + outputPath);
+            //    sender.sendMessage("Textures exported to: " + outputPath);
             } catch (IOException e) {
-                sender.sendMessage("Error writing to output file.");
-                getLogger().severe("Error writing to output file.");
+                sender.sendMessage(error_file);
+                getLogger().severe(error_file);
                 e.printStackTrace();
             }
         } else {
-            sender.sendMessage("No .ysm files found in export directory.");
+            sender.sendMessage(not_found_model);
         }
     }
     private void readPlayerData(Player player) {
         String playerUUID = player.getUniqueId().toString();
         File uuidFile = new File(getDataFolder().getParentFile().getParent(), "earth/playerdata/" + playerUUID + ".dat");
 
-        getLogger().info("Trying to read player data from: " + uuidFile.getAbsolutePath());
+        getLogger().info("尝试读取 " + uuidFile.getAbsolutePath());
 
         if (uuidFile.exists()) {
             try {
                 NBTFile nbtFile = new NBTFile(uuidFile);
-                getLogger().info("Successfully loaded NBT file.");
+                getLogger().info("成功加载");
 
                 // 输出整个 NBT 数据以便调试
                 String nbtContent = nbtFile.toString();
-                getLogger().info("NBT Content: " + nbtContent);
+                getLogger().info("内容: " + nbtContent);
 
                 // 尝试提取 model_id 和 select_texture
                 String modelId = extractValue(nbtContent, "yes_steve_model:model_id", "model_id");
                 String selectTexture = extractValue(nbtContent, "yes_steve_model:model_id", "select_texture");
 
                 if (modelId != null && selectTexture != null) {
-                    player.sendMessage("Your model_id: " + modelId + ", select_texture: " + selectTexture);
+                    player.sendMessage("你的模型ID " + modelId + ", 贴图选择 " + selectTexture);
                 } else {
                     player.sendMessage("Failed to extract model id or select texture.");
                     getLogger().warning("Failed to extract model_id or select_texture for UUID: " + playerUUID);
