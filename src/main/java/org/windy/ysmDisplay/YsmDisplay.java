@@ -1,16 +1,14 @@
 package org.windy.ysmDisplay;
 
-import de.tr7zw.nbtapi.NBTCompound;
+import de.tr7zw.nbtapi.NBTFile;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,9 +17,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import de.tr7zw.nbtapi.NBTContainer;
-import de.tr7zw.nbtapi.NBTFile;
 public final class YsmDisplay extends JavaPlugin implements Listener {
     private String only_player;
     private String not_found_model;
@@ -37,7 +32,9 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
         getCommand("ydp").setTabCompleter(this);
 
-        getLogger().info("YesDisplay Plugin Enabled!");
+        this.getServer().getConsoleSender().sendMessage(Texts.logo);
+        this.getServer().getConsoleSender().sendMessage(Texts.info);
+
 
         loadconfig();
     }
@@ -53,7 +50,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        getLogger().info("YesDisplay Plugin Disabled!");
+        this.getServer().getConsoleSender().sendMessage(Texts.logo);
     }
 
     @Override
