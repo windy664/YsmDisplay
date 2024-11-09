@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
@@ -14,13 +15,22 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import de.tr7zw.nbtapi.NBTContainer;
 import de.tr7zw.nbtapi.NBTFile;
-public class YsmDisplay extends JavaPlugin {
+public final class YsmDisplay extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        this.saveDefaultConfig();
+        Bukkit.getPluginManager().registerEvents(this, this);
+
+        getCommand("ydp").setTabCompleter(this);
+
         getLogger().info("YesDisplay Plugin Enabled!");
     }
 
@@ -80,6 +90,40 @@ public class YsmDisplay extends JavaPlugin {
             }
         }
         return false;
+    }
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (command.getName().equalsIgnoreCase("ydp")) {
+            List<String> completions = new ArrayList<>();
+
+            if (args.length == 1) {
+                // 提供子命令的补全
+                completions.addAll(Arrays.asList("export", "load", "player", "display"));
+            } else if (args.length == 2 && args[0].equalsIgnoreCase("display")) {
+                // 提供在线玩家名称的补全
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    completions.add(player.getName());
+                }
+            } else if (args.length == 3 && args[0].equalsIgnoreCase("display")) {
+                // 提供模型ID的补全
+                File exportDir = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export");
+                if (exportDir.exists()) {
+                    for (File file : exportDir.listFiles()) {
+                        if (file.isFile() && file.getName().endsWith(".ysm")) {
+                            completions.add(file.getName().replace(".ysm", ""));
+                        }
+                    }
+                }
+            } else if (args.length == 4 && args[0].equalsIgnoreCase("display")) {
+                // 提供时间单位的补全
+                completions.addAll(Arrays.asList("30s", "1m", "30m", "1h", "1d"));
+            }
+
+            return completions.stream()
+                    .filter(completion -> completion.toLowerCase().startsWith(args[args.length - 1].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
     }
     private String getFirstTexture(String modelId) {
         File texturesFile = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export/textures_output.txt");
