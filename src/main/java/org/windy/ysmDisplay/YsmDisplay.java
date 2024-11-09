@@ -37,6 +37,9 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
 
         loadconfig();
+        if (Bukkit.getPluginManager().getPlugin("NBTAPI") != null) {
+            this.getServer().getConsoleSender().sendMessage("检测到NBTAPI，已依赖！");
+        }
     }
 
     private void loadconfig(){
