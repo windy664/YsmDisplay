@@ -43,10 +43,62 @@ public class YsmDisplay extends JavaPlugin {
                 } else if (args[0].equalsIgnoreCase("player")) {
                     readPlayerData(player);
                     return true;
+                } else if (args.length >= 9 && args[0].equalsIgnoreCase("display")) {
+                    if (sender.hasPermission("ysmdisplay.display")) { // 假设我们有一个权限节点
+                        Player targetPlayer = Bukkit.getPlayer(args[1]);
+                        if (targetPlayer != null) {
+                            String modelId = args[2];
+                            String timeArg = args[3];
+                            long duration = parseTime(timeArg); // 解析时间参数
+                            if (duration > 0) {
+                                String texture = getFirstTexture(modelId); // 从文件中获取纹理
+                                if (texture != null) {
+                                    // 设置模型
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm model set " + args[1] + " " + modelId + " " + texture + " true");
+
+                                    // 安排定时任务，在指定时间后取消模型
+                                    scheduleModelReset(targetPlayer, modelId, duration);
+                                    sender.sendMessage("Model set for " + targetPlayer.getName() + " with ID " + modelId + " for " + timeArg + ".");
+                                } else {
+                                    sender.sendMessage("Could not find the texture for the model ID " + modelId + ".");
+                                }
+                            } else {
+                                sender.sendMessage("Invalid time format. Use 30s, 0.5m, 1h, 3d, etc.");
+                            }
+                        } else {
+                            sender.sendMessage("Player " + args[1] + " is not online.");
+                        }
+                    } else {
+                        sender.sendMessage("You do not have permission to use this command.");
+                    }
+                    return true;
                 }
             }
         }
         return false;
+    }
+    private String getFirstTexture(String modelId) {
+        File texturesFile = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export/textures_output.txt");
+        if (texturesFile.exists()) {
+            try (BufferedReader br = new BufferedReader(new FileReader(texturesFile))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.startsWith(modelId + ": ")) {
+                        return line.split(": ")[1];
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+    // 安排模型重置
+    private void scheduleModelReset(Player player, String modelId, long duration) {
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // 重置模型
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm model set " + player.getName() + " default default true");
+        }, duration * 20); // 转换为游戏刻
     }
 
     private void exportYsmFiles(CommandSender sender) {
@@ -191,5 +243,23 @@ public class YsmDisplay extends JavaPlugin {
         String value = compound.substring(startIndex, endIndex).trim().replace("\"", "");
         return value;
     }
-
+    // 解析时间参数
+// 解析时间参数
+    private long parseTime(String time) {
+        long multiplier = 1; // 默认为秒
+        if (time.endsWith("s")) {
+            multiplier = 1;
+        } else if (time.endsWith("m")) {
+            multiplier = 60; // 分钟转秒
+        } else if (time.endsWith("h")) {
+            multiplier = 60 * 60; // 小时转秒
+        } else if (time.endsWith("d")) {
+            multiplier = 24 * 60 * 60; // 天数转秒
+        } else {
+            return -1; // 无效的时间格式
+        }
+        // 移除单位并解析数字
+        long value = Long.parseLong(time.substring(0, time.length() - 1));
+        return value * multiplier;
+    }
 }
