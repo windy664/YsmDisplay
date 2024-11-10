@@ -1,6 +1,7 @@
 package org.windy.ysmDisplay;
 
 import de.tr7zw.nbtapi.NBTFile;
+import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,6 +18,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import me.clip.placeholderapi.PlaceholderAPI;
+import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import static me.clip.placeholderapi.PlaceholderAPI.*;
+
 public final class YsmDisplay extends JavaPlugin implements Listener {
     private String only_player;
     private String not_found_model;
@@ -40,6 +47,13 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         if (Bukkit.getPluginManager().getPlugin("NBTAPI") != null) {
             this.getServer().getConsoleSender().sendMessage("检测到NBTAPI，已依赖！");
         }
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            // 注册自定义占位符扩展
+            new YdpUsePlaceholder().register();
+        } else {
+            getLogger().warning("PlaceholderAPI 插件未安装，无法注册占位符扩展！");
+        }
+
     }
 
     private void loadconfig(){
@@ -177,7 +191,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                 String nameWithoutExtension = fileName.substring(0, fileName.length() - 4);
                 Bukkit.getScheduler().runTask(this, () -> {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm export " + nameWithoutExtension);
-                  //  sender.sendMessage("Executed: /ysm export " + nameWithoutExtension);
+                    //  sender.sendMessage("Executed: /ysm export " + nameWithoutExtension);
                 });
             }
         } else {
@@ -213,7 +227,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
             try {
                 Path outputPath = Paths.get(exportDir.getAbsolutePath(), "textures_output.txt");
                 Files.write(outputPath, textureList);
-            //    sender.sendMessage("Textures exported to: " + outputPath);
+                //    sender.sendMessage("Textures exported to: " + outputPath);
             } catch (IOException e) {
                 sender.sendMessage(error_file);
                 getLogger().severe(error_file);
