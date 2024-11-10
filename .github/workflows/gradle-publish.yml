@@ -33,5 +33,5 @@ jobs:
     - name: Archive JAR file
       uses: actions/upload-artifact@v3
       with:
-        name: YsmDisplay
+        name: [Y][YSM模型管理]YsmDisplay
         path: build/libs/*.jar
