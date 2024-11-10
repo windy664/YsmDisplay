@@ -1,7 +1,11 @@
 name: YsmDisplay
-version: '1.0-SNAPSHOT'
+version: $version
 main: org.windy.ysmDisplay.YsmDisplay
 api-version: '1.21'
+depend:
+  - NBTAPI
+softdepend:
+  - PlaceholderAPI
 commands:
   ydp:
     description: "Test command for YsmDisplay"
