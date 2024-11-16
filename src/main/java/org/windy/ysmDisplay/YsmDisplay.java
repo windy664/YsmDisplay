@@ -18,11 +18,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import me.clip.placeholderapi.PlaceholderAPI;
-import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import org.bukkit.plugin.java.JavaPlugin;
 
-import static me.clip.placeholderapi.PlaceholderAPI.*;
 
 public final class YsmDisplay extends JavaPlugin implements Listener {
     private String only_player;
@@ -30,10 +26,11 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
     private String not_format;
     private String error_file;
     private String not_permission;
-
+    private static YsmDisplay instance;
 
     @Override
     public void onEnable() {
+        instance = this;
         this.saveDefaultConfig();
         Bukkit.getPluginManager().registerEvents(this, this);
 
@@ -72,6 +69,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        Player player = (Player) sender;
         if (command.getName().equalsIgnoreCase("ydp")) {
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("export")) {
@@ -82,7 +80,8 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                     return true;
                 } else if (args[0].equalsIgnoreCase("player")) {
                     if (sender instanceof Player) {
-                        readPlayerData((Player) sender);
+                        String modelId = YsmDisplay.getInstance().readPlayerData((Player) player);
+                        player.sendMessage("你的模型ID " + modelId );
                     } else {
                         sender.sendMessage(only_player);
                     }
@@ -237,6 +236,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
             sender.sendMessage(not_found_model);
         }
     }
+    /*
     private void readPlayerData(Player player) {
         String playerUUID = player.getUniqueId().toString();
         File uuidFile = new File(getDataFolder().getParentFile().getParent(), "earth/playerdata/" + playerUUID + ".dat");
@@ -273,6 +273,48 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
             getLogger().warning("Player data file does not exist for UUID: " + playerUUID);
         }
     }
+
+     */
+    public static YsmDisplay getInstance() {
+        return instance;
+    }
+    public String readPlayerData(Player player) {
+        String playerUUID = player.getUniqueId().toString();
+        File uuidFile = new File(getDataFolder().getParentFile().getParent(), "earth/playerdata/" + playerUUID + ".dat");
+
+        getLogger().info("尝试读取 " + uuidFile.getAbsolutePath());
+
+        if (uuidFile.exists()) {
+            try {
+                NBTFile nbtFile = new NBTFile(uuidFile);
+                getLogger().info("成功加载");
+
+                // 输出整个 NBT 数据以便调试
+                String nbtContent = nbtFile.toString();
+                getLogger().info("内容: " + nbtContent);
+
+                // 尝试提取 model_id 和 select_texture
+                String modelId = extractValue(nbtContent, "yes_steve_model:model_id", "model_id");
+                String selectTexture = extractValue(nbtContent, "yes_steve_model:model_id", "select_texture");
+
+                if (modelId != null && selectTexture != null) {
+               //     player.sendMessage("你的模型ID " + modelId + ", 贴图选择 " + selectTexture);
+                    // 将 modelId 返回，供 PlaceholderAPI 使用
+                    return modelId;
+                } else {
+                    getLogger().warning("Failed to extract model_id or select_texture for UUID: " + playerUUID);
+                }
+            } catch (Exception e) {
+                getLogger().severe("Error reading player file for UUID: " + playerUUID);
+                getLogger().severe("Exception: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            getLogger().warning("Player data file does not exist for UUID: " + playerUUID);
+        }
+        return null;  // 如果没有提取到数据，返回 null
+    }
+
 
     private String extractValue(String text, String key, String subKey) {
         int startIndex = text.indexOf(key);
