@@ -5,19 +5,15 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Random;
 
 
 public final class YsmDisplay extends JavaPlugin implements Listener {
@@ -27,6 +23,9 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
     private String error_file;
     private String not_permission;
     private static YsmDisplay instance;
+    private int max_price;
+    private int min_price;
+    private int price;
 
     @Override
     public void onEnable() {
@@ -51,6 +50,9 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
             getLogger().warning("PlaceholderAPI 插件未安装，无法注册占位符扩展！");
         }
 
+
+        exportYsmFiles();
+        loadTextures();
     }
 
     private void loadconfig(){
@@ -59,7 +61,8 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         not_format = getConfig().getString("not_format","无效的格式");
         not_permission = getConfig().getString("not_permission","无权限");
         error_file = getConfig().getString("error_file","错误的文件");
-
+        max_price = getConfig().getInt("max_price",100);
+        min_price = getConfig().getInt("min_price",100);
     }
 
     @Override
@@ -69,22 +72,30 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = (Player) sender;
         if (command.getName().equalsIgnoreCase("ydp")) {
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("export")) {
-                    exportYsmFiles(sender);
+                    exportYsmFiles();
                     return true;
                 } else if (args[0].equalsIgnoreCase("load")) {
-                    loadTextures(sender);
+                    loadTextures();
                     return true;
                 } else if (args[0].equalsIgnoreCase("player")) {
-                    if (sender instanceof Player) {
-                        String modelId = YsmDisplay.getInstance().readPlayerData((Player) player);
-                        player.sendMessage("你的模型ID " + modelId );
+                    if (sender instanceof Player player) {
+                        String modelId = YsmDisplay.getInstance().readPlayerData(player);
+                        player.sendMessage("你的模型ID: " + modelId);
                     } else {
                         sender.sendMessage(only_player);
                     }
+                    return true;
+                } else if (args[0].equalsIgnoreCase("reload")) {
+                        loadconfig();
+                        sender.sendMessage("重载完成");
+
+                }else if (args[0].equalsIgnoreCase("open")) {
+                        loadconfig();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                            "deluxemenus:deluxemenu open Points-Models-1 "+ sender.getName());
                     return true;
                 } else if (args[0].equalsIgnoreCase("display") && args.length >= 4) {
                     if (sender.hasPermission("ysmdisplay.display")) { // 假设我们有一个权限节点
@@ -94,15 +105,16 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                             String timeArg = args[3];
                             long duration = parseTime(timeArg); // 解析时间参数
                             if (duration > 0) {
-                                String file_model = modelId + ".ysm";
-                                String texture = getFirstTexture(file_model); // 从文件中获取纹理
+                                String fileModel = modelId + ".ysm";
+                                String texture = getFirstTexture(fileModel); // 从文件中获取纹理
                                 if (texture != null) {
                                     // 设置模型
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm model set " + args[1] + " " + modelId + " " + texture + " true");
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                                            "ysm model set " + args[1] + " " + modelId + " " + texture + " true");
 
                                     // 安排定时任务，在指定时间后取消模型
                                     scheduleModelReset(targetPlayer, modelId, duration);
-                                    sender.sendMessage("已为玩家" + targetPlayer.getName() + "体验模型" + modelId + "，到期：" + timeArg + ".");
+                                    sender.sendMessage("已为玩家 " + targetPlayer.getName() + " 体验模型 " + modelId + "，到期：" + timeArg + ".");
                                 } else {
                                     sender.sendMessage(not_found_model + modelId + ".");
                                 }
@@ -110,7 +122,20 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
                                 sender.sendMessage(not_format);
                             }
                         } else {
-                            sender.sendMessage( args[1] + "disonline");
+                            sender.sendMessage(args[1] + " 不在线.");
+                        }
+                    } else {
+                        sender.sendMessage(not_permission);
+                    }
+                    return true;
+                } else if (args[0].equalsIgnoreCase("gen")) { // 新增指令
+                    if (sender.hasPermission("ysmdisplay.gen")) {
+                        try {
+                            PointsModelsGenerator generator = new PointsModelsGenerator();
+                            generator.generatePointsModels();
+                            sender.sendMessage("成功生成 Points-Models.yml 文件！");
+                        } catch (Exception e) {
+                            sender.sendMessage("生成文件时发生错误: " + e.getMessage());
                         }
                     } else {
                         sender.sendMessage(not_permission);
@@ -121,6 +146,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         }
         return false;
     }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (command.getName().equalsIgnoreCase("ydp")) {
@@ -128,7 +154,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
 
             if (args.length == 1) {
                 // 提供子命令的补全
-                completions.addAll(Arrays.asList("export", "load", "player", "display"));
+                completions.addAll(Arrays.asList("export", "load", "player", "display","gen","reload","open"));
             } else if (args.length == 2 && args[0].equalsIgnoreCase("display")) {
                 // 提供在线玩家名称的补全
                 for (Player player : Bukkit.getOnlinePlayers()) {
@@ -156,21 +182,46 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         return Collections.emptyList();
     }
     private String getFirstTexture(String modelId) {
-        File texturesFile = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export/textures_output.txt");
-        if (texturesFile.exists()) {
-            try (BufferedReader br = new BufferedReader(new FileReader(texturesFile))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.startsWith(modelId + ": ")) {
-                        return line.split(": ")[1];
-                    }
+        // 获取 data.yml 文件路径
+        File dataFile = new File(getDataFolder(), "data.yml");
+
+        // 检查文件是否存在
+        if (dataFile.exists()) {
+            try {
+                // 加载 YAML 文件
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(dataFile);
+
+                // 如果模型 ID 包含 .ysm 后缀，移除它
+                if (modelId.endsWith(".ysm")) {
+                    modelId = modelId.substring(0, modelId.length() - 4); // 移除 .ysm
                 }
-            } catch (IOException e) {
+
+                // 获取指定模型 ID 的 Texture 值
+                String texture = yaml.getString(modelId + ".Texture");
+
+                if (texture != null) {
+                    // 记录成功获取贴图路径的日志
+                    getLogger().info("Texture found for model '" + modelId + "': " + texture);
+                    return texture;
+                } else {
+                    // 记录未找到贴图路径的日志
+                    getLogger().warning("No texture found for model ID: " + modelId);
+                }
+            } catch (Exception e) {
+                // 记录异常日志
+                getLogger().severe("Error reading data.yml for model ID: " + modelId);
                 e.printStackTrace();
             }
+        } else {
+            // 记录文件不存在的日志
+            getLogger().warning("data.yml file not found in plugin directory.");
         }
+
+        // 返回 null 表示未找到贴图路径
         return null;
     }
+
+
     // 安排模型重置
     private void scheduleModelReset(Player player, String modelId, long duration) {
         Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -179,25 +230,36 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         }, duration * 20); // 转换为游戏刻
     }
 
-    private void exportYsmFiles(CommandSender sender) {
+    private void exportYsmFiles() {
         File pluginDir = getDataFolder().getParentFile();
         File configDir = new File(pluginDir.getParentFile(), "config/yes_steve_model/auth");
 
+        // 查找.ysm文件
         String[] ysmFiles = configDir.list((dir, name) -> name.endsWith(".ysm"));
 
-        if (ysmFiles != null) {
+        // 获取目录下的所有文件夹
+        File[] folders = configDir.listFiles(File::isDirectory);
+
+        if (ysmFiles!= null) {
             for (String fileName : ysmFiles) {
                 String nameWithoutExtension = fileName.substring(0, fileName.length() - 4);
                 Bukkit.getScheduler().runTask(this, () -> {
+                    // 对.ysm文件去掉扩展名后的名字执行导出命令
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm export " + nameWithoutExtension);
-                    //  sender.sendMessage("Executed: /ysm export " + nameWithoutExtension);
                 });
             }
-        } else {
-            sender.sendMessage(not_found_model);
+        }
+
+        if (folders!= null) {
+            for (File folder : folders) {
+                Bukkit.getScheduler().runTask(this, () -> {
+                    // 对文件夹名字执行导出命令
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ysm export " + folder.getName());
+                });
+            }
         }
     }
-
+/*
     private void loadTextures(CommandSender sender) {
         File exportDir = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export");
         File[] ysmFiles = exportDir.listFiles((dir, name) -> name.endsWith(".ysm"));
@@ -235,49 +297,90 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         } else {
             sender.sendMessage(not_found_model);
         }
-    }
-    /*
-    private void readPlayerData(Player player) {
-        String playerUUID = player.getUniqueId().toString();
-        File uuidFile = new File(getDataFolder().getParentFile().getParent(), "earth/playerdata/" + playerUUID + ".dat");
+    }*/
+private void loadTextures() {
+    Random rand = new Random();
+// 先获取 [0, max_price - min_price] 之间的随机数
+    int randomValueInRange = rand.nextInt(max_price - min_price + 1);
+// 再加上 min_price 得到最终在 [min_price, max_price] 之间的随机数
+    price = randomValueInRange + min_price;
+    // 获取 export 目录
+    File exportDir = new File(getDataFolder().getParentFile().getParent(), "config/yes_steve_model/export");
+    File[] ysmFiles = exportDir.listFiles((dir, name) -> name.endsWith(".ysm"));
 
-        getLogger().info("尝试读取 " + uuidFile.getAbsolutePath());
+    // 初始化一个 Map 用于存储 YAML 数据
+    Map<String, Map<String, String>> textureDataMap = new HashMap<>();
 
-        if (uuidFile.exists()) {
-            try {
-                NBTFile nbtFile = new NBTFile(uuidFile);
-                getLogger().info("成功加载");
+    if (ysmFiles != null) {
+        for (File ysmFile : ysmFiles) {
+            String fileName = ysmFile.getName();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(ysmFile), "UTF-8"))) {
+                String line;
+                String textureName = null;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("<texture>")) {
+                        textureName = line.split(" ")[1]; // 获取 <texture> 后面的内容
+                        if (textureName != null) {
+                            // 构造此贴图的 YAML 数据
+                            Map<String, String> textureData = new HashMap<>();
+                            textureData.put("name", fileName.split("\\.")[0]); // 取文件名作为 name
+                            textureData.put("price", String.valueOf(price)); // 设置默认价格
+                            textureData.put("lore", "简介"); // 设置默认简介
+                            textureData.put("Texture", textureName); // 设置贴图路径
 
-                // 输出整个 NBT 数据以便调试
-                String nbtContent = nbtFile.toString();
-                getLogger().info("内容: " + nbtContent);
-
-                // 尝试提取 model_id 和 select_texture
-                String modelId = extractValue(nbtContent, "yes_steve_model:model_id", "model_id");
-                String selectTexture = extractValue(nbtContent, "yes_steve_model:model_id", "select_texture");
-
-                if (modelId != null && selectTexture != null) {
-                    player.sendMessage("你的模型ID " + modelId + ", 贴图选择 " + selectTexture);
-                } else {
-                    player.sendMessage("Failed to extract model id or select texture.");
-                    getLogger().warning("Failed to extract model_id or select_texture for UUID: " + playerUUID);
+                            // 添加到主 Map，以文件名为键
+                            textureDataMap.put(textureData.get("name"), textureData);
+                        }
+                    }
                 }
-            } catch (Exception e) {
-                player.sendMessage("Error reading your player file.");
-                getLogger().severe("Error reading player file for UUID: " + playerUUID);
-                getLogger().severe("Exception: " + e.getMessage());
+            } catch (IOException e) {
+                getLogger().severe(error_file + fileName);
                 e.printStackTrace();
             }
-        } else {
-            player.sendMessage("Your player data file does not exist.");
-            getLogger().warning("Player data file does not exist for UUID: " + playerUUID);
+        }
+
+        // 写入到 plugins\YsmDisplay\data.yml
+        try {
+            File dataFile = new File(getDataFolder(), "data.yml");
+
+            // 如果文件不存在，则创建它
+            if (!dataFile.exists()) {
+                dataFile.createNewFile();
+            }
+
+            // 使用 YamlConfiguration 管理 YAML 数据
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(dataFile);
+
+            // 将贴图数据写入到 YAML 配置中
+            for (Map.Entry<String, Map<String, String>> entry : textureDataMap.entrySet()) {
+                String textureKey = entry.getKey();
+                Map<String, String> textureData = entry.getValue();
+
+                // 转换每个贴图数据为 YAML 结构
+                yaml.set(textureKey + ".name", textureData.get("name"));
+                yaml.set(textureKey + ".price", textureData.get("price"));
+                yaml.set(textureKey + ".lore", textureData.get("lore"));
+                yaml.set(textureKey + ".Texture", textureData.get("Texture"));
+            }
+
+            // 保存到 data.yml 文件
+            yaml.save(dataFile);
+
+
+        } catch (IOException e) {
+
+            getLogger().severe(error_file);
+            e.printStackTrace();
         }
     }
+}
 
-     */
+
+
     public static YsmDisplay getInstance() {
         return instance;
     }
+
     public String readPlayerData(Player player) {
         String playerUUID = player.getUniqueId().toString();
         File uuidFile = new File(getDataFolder().getParentFile().getParent(), "earth/playerdata/" + playerUUID + ".dat");
