@@ -13,6 +13,7 @@ import java.util.Set;
 public class PointsModelsGenerator {
     private static final String DATA_FILE = "data.yml";
     private static final String OUTPUT_FILE = "Points-Models.yml";
+    public static int currentFileIndex;
 
     public void generatePointsModels() throws IOException {
 
@@ -24,12 +25,13 @@ public class PointsModelsGenerator {
         YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
         YamlConfiguration outputConfig = new YamlConfiguration();
 
-        outputConfig.set("menu_title", "📦 时装商店");
+
 
         int slot = 10;
         Set<Integer> excludedSlots = new HashSet<>(Arrays.asList(17, 18, 26, 27, 35, 36)); // 排除的槽位
         int maxSlot = 43; // 最大槽位
-        int currentFileIndex = 1; // 当前文件索引，开始为 1
+        currentFileIndex = 1; // 当前文件索引，开始为 1
+        outputConfig.set("menu_title", YsmDisplay.getInstance().getConfig().getString("menu.title", "📦 时装商店 #"+currentFileIndex)+currentFileIndex);
         int nextFileSlotStart = 10; // 第二个文件的起始槽位
 
         File guiMenusDir = new File(Bukkit.getPluginManager().getPlugin("DeluxeMenus").getDataFolder(), "gui_menus");
@@ -52,7 +54,7 @@ public class PointsModelsGenerator {
                     outputConfig.save(new File(guiMenusDir, "Points-Models-" + currentFileIndex + ".yml"));
                     outputConfig = new YamlConfiguration(); // 重置新的配置文件
                     currentFileIndex++; // 文件索引递增
-                    outputConfig.set("menu_title", "📦 时装商店"); // 重新设置标题
+                    outputConfig.set("menu_title", "📦 时装商店 "+currentFileIndex); // 重新设置标题
                     // 每次生成新文件时，也需要重新设置 'filler_item' 和 'create'
                     addFillerItemAndCreate(outputConfig);
                 }
@@ -119,14 +121,39 @@ public class PointsModelsGenerator {
         config.set(fillerItemPath + ".material", "GRAY_STAINED_GLASS_PANE");
         config.set(fillerItemPath + ".slots", List.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 17, 18, 26, 27, 35, 36, 44, 45, 46, 47, 49, 51, 52, 53));
 
-        // 添加 'create' 配置
-        String createPath = "items.create";
-        config.set(createPath + ".material", "paper");
-        config.set(createPath + ".model_data", 10020);
-        config.set(createPath + ".display_name", "🩹 &f返回");
-        config.set(createPath + ".slot", 50);
-        config.set(createPath + ".left_click_commands", List.of(
-                "[openguimenu] pointstore"
+        // 添加 'next' 配置
+        String createPath = "items.next";
+        config.set(createPath + ".material", YsmDisplay.getInstance().getConfig().getString("menu.next.icon", "lime_stained_glass_pane"));
+        config.set(createPath + ".model_data", YsmDisplay.getInstance().getConfig().getString("menu.next.data","10020"));
+        config.set(createPath + ".display_name", YsmDisplay.getInstance().getConfig().getString("menu.next.name","\\uD83D\\uDD1C &f下一页"));
+        config.set(createPath + ".slot", YsmDisplay.getInstance().getConfig().getInt("menu.next.slot",53));
+        config.set(createPath + ".left_click_commands", List.of("[openguimenu] Points-Models-" + (currentFileIndex + 1)));
+
+
+        // Add 'last' configuration
+        String lastPath = "items.last";
+        config.set(lastPath + ".material", YsmDisplay.getInstance().getConfig().getString("menu.last.icon", "lime_stained_glass_pane"));
+        config.set(lastPath + ".model_data", YsmDisplay.getInstance().getConfig().getInt("menu.last.data", 10020));
+        config.set(lastPath + ".display_name", YsmDisplay.getInstance().getConfig().getString("menu.last.name", "⬅️ &f上一页"));
+        config.set(lastPath + ".slot", YsmDisplay.getInstance().getConfig().getInt("menu.last.slot", 45));
+        config.set(lastPath + ".left_click_commands", List.of("[openguimenu] Points-Models-"+(currentFileIndex-1)));
+
+        // Add 'back' configuration
+        String backPath = "items.back";
+        config.set(backPath + ".material", YsmDisplay.getInstance().getConfig().getString("menu.back.icon","lime_stained_glass_pane"));
+        config.set(backPath + ".model_data", YsmDisplay.getInstance().getConfig().getString("menu.back.data","10020"));
+        config.set(backPath + ".display_name", YsmDisplay.getInstance().getConfig().getString("menu.back.name","⬅️ &f返回"));
+        config.set(backPath + ".slot", YsmDisplay.getInstance().getConfig().getInt("menu.back.slot",49));
+        config.set(backPath + ".left_click_commands", "[console] "+ YsmDisplay.getInstance().getConfig().getString("menu.back.command","dc open menu %player_name%"));
+
+        // Add 'announcement' configuration
+        String announcementPath = "items.announcement";
+        config.set(announcementPath + ".material", YsmDisplay.getInstance().getConfig().getString("menu.announcement.icon","white_stained_glass_pane"));
+        config.set(announcementPath + ".model_data", YsmDisplay.getInstance().getConfig().getString("menu.announcement.data","10020"));
+        config.set(announcementPath + ".display_name", YsmDisplay.getInstance().getConfig().getString("menu.announcement.name","🔈&f公告"));
+        config.set(announcementPath + ".slot", YsmDisplay.getInstance().getConfig().getInt("menu.announcement.slot",48));
+        config.set(announcementPath + ".lore", List.of(
+                YsmDisplay.getInstance().getConfig().getStringList("menu.announcement.lore")
         ));
     }
 
