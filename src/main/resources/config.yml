@@ -1,4 +1,31 @@
 only_player: "命令仅适用于玩家执行"
 not_found_model: "找不到模型"
 not_format: "格式错误"
-
+#最小价格
+min-price: 90
+#最大价格
+max-price: 320
+menu:
+  title: "📦 时装商店 #"
+  last:
+    name: "⬅️ &f上一页"
+    icon: lime_stained_glass_pane
+    data: 10020
+    slot: 45
+  next:
+    name: "\uD83D\uDD1C &f下一页"
+    icon: lime_stained_glass_pane
+    data: 10020
+    slot: 53
+  back:
+    name: "⬅️ &f返回"
+    icon: lime_stained_glass_pane
+    data: 10020
+    command: dc open menu %player_name%
+    slot: 49
+  announcement:
+    name: "🔈&f公告"
+    icon: white_stained_glass_pane
+    data: 10020
+    slot: 48
+    lore: []
