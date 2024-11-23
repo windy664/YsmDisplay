@@ -1,7 +1,6 @@
 package org.windy.ysmDisplay;
 
 import de.tr7zw.nbtapi.NBTFile;
-import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -13,7 +12,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Random;
 
 
 public final class YsmDisplay extends JavaPlugin implements Listener {
@@ -26,6 +24,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
     private int max_price;
     private int min_price;
     private int price;
+    public String title;
 
     @Override
     public void onEnable() {
@@ -55,7 +54,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         loadTextures();
     }
 
-    private void loadconfig(){
+    public void loadconfig(){
         only_player = getConfig().getString("only_player","仅玩家可使用");
         not_found_model = getConfig().getString("not_found_model","未找到模型");
         not_format = getConfig().getString("not_format","无效的格式");
@@ -63,6 +62,7 @@ public final class YsmDisplay extends JavaPlugin implements Listener {
         error_file = getConfig().getString("error_file","错误的文件");
         max_price = getConfig().getInt("max_price",100);
         min_price = getConfig().getInt("min_price",100);
+        title = getConfig().getString("title","📦 时装商店");
     }
 
     @Override
