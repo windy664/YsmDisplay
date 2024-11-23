@@ -82,7 +82,7 @@ public class PointsModelsGenerator {
                     "&8• &7价格: &f" + price + " &c点券",
                     " ",
                     "&8| &f➢ 左键 | 购买",
-                    "&8| &f➢ 右键 | 预览",
+                    "&8| &f➢ 右键 | 试穿5分钟",
                     ""
             ));
             outputConfig.set(itemPath + ".left_click_commands", List.of(
